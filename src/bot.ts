@@ -1,53 +1,19 @@
-import { Bot, Context, session, SessionFlavor, webhookCallback } from 'grammy';
-import { freeStorage } from '@grammyjs/storage-free';
+import { Bot, webhookCallback } from 'grammy';
 import { DateTime } from 'luxon';
 import express from 'express';
+import { addRecord, createDatabase, getRecords, removeRecord } from './database';
+import { formatDate, formatLine } from './interface';
 
-interface BirthdayData {
-  name: string;
-  date: string;
-}
+const bot = new Bot(process.env.TELEGRAM_TOKEN || '');
 
-type BirthdayContext = Context & SessionFlavor<BirthdayData[]>;
-
-// Create a bot using the Telegram token
-const bot = new Bot<BirthdayContext>(process.env.TELEGRAM_TOKEN || '');
-
-bot.use(
-  session({
-    initial: () => [],
-    storage: freeStorage<BirthdayData[]>(bot.token),
-  }),
-);
-
-// Handle the /yo command to greet the user
 bot.command('list', (ctx) => {
-  const birthdays = ctx.session;
-  if (birthdays.length === 0) {
-    return ctx.reply('No birthdays yet');
-  } else {
-    const birthdays = ctx.session.sort((a, b) => {
-      const aDate = new Date(a.date);
-      const bDate = new Date(b.date);
-      return aDate === bDate ? 0 : aDate > bDate ? 1 : -1;
-    });
-
-    return ctx.reply(
-      birthdays
-        .map((record) => {
-          const date = new Date(record.date);
-          const age = DateTime.fromJSDate(date).diffNow('years').years * -1;
-
-          return `<code>${date.toLocaleDateString('pt-PT', {
-            year: 'numeric',
-            month: 'short',
-            day: '2-digit',
-          })}</code> — ${record.name} (${Math.floor(age)})`;
-        })
-        .join('\n'),
-      { parse_mode: 'HTML' },
-    );
-  }
+  getRecords().then((birthdays) => {
+    if (birthdays.length === 0) {
+      return ctx.reply('No birthdays yet');
+    } else {
+      return ctx.reply(birthdays.map(formatLine).join('\n'), { parse_mode: 'HTML' });
+    }
+  });
 });
 
 bot.command('add', (ctx) => {
@@ -58,9 +24,7 @@ bot.command('add', (ctx) => {
     return ctx.reply('Please provide a name and a date like this: /add John, 2021-01-01');
   }
 
-  const record = { name: name.trim(), date: date.trim() };
-
-  ctx.session.push(record);
+  const record = addRecord({ name, date });
   return ctx.reply(`Added ${record.name} — ${record.date}`);
 });
 
@@ -71,13 +35,8 @@ bot.command('remove', (ctx) => {
     return ctx.reply('Please provide a name');
   }
 
-  const index = ctx.session.findIndex((b) => b.name === name);
+  removeRecord({ name });
 
-  if (index === -1) {
-    return ctx.reply('No such birthday');
-  }
-
-  ctx.session.splice(index, 1);
   return ctx.reply(`Removed ${name}`);
 });
 
@@ -99,6 +58,8 @@ if (process.env.NODE_ENV === 'production') {
   // Use Long Polling for development
   bot.start();
 }
+
+createDatabase();
 
 app.post('/trigger', (req, res) => {
   console.log('Reveived trigger request!');
