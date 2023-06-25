@@ -93,6 +93,7 @@ app.listen(PORT, () => {
 
 // Start the server
 if (process.env.NODE_ENV === 'production') {
+  console.log('Uing Webhooks');
   app.use(webhookCallback(bot, 'express'));
 } else {
   // Use Long Polling for development
@@ -100,6 +101,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 app.post('/trigger', (req, res) => {
+  console.log('Reveived trigger request!');
   bot.api.sendMessage(process.env.CHAT_ID as string, 'Hello world');
   res.json({ message: 'Triggered!' });
 });
