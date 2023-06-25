@@ -1,188 +1,105 @@
-import { Bot, InlineKeyboard, webhookCallback } from 'grammy';
-import { chunk } from 'lodash';
+import { Bot, Context, session, SessionFlavor, webhookCallback } from 'grammy';
+import { freeStorage } from '@grammyjs/storage-free';
+import { DateTime } from 'luxon';
 import express from 'express';
-import { applyTextEffect, Variant } from './textEffects';
 
-import type { Variant as TextEffectVariant } from './textEffects';
+interface BirthdayData {
+  name: string;
+  date: string;
+}
+
+type BirthdayContext = Context & SessionFlavor<BirthdayData[]>;
 
 // Create a bot using the Telegram token
-const bot = new Bot(process.env.TELEGRAM_TOKEN || '');
+const bot = new Bot<BirthdayContext>(process.env.TELEGRAM_TOKEN || '');
 
-// Handle the /yo command to greet the user
-bot.command('yo', (ctx) => ctx.reply(`Yo ${ctx.from?.username}`));
-
-// Handle the /effect command to apply text effects using an inline keyboard
-type Effect = { code: TextEffectVariant; label: string };
-const allEffects: Effect[] = [
-  {
-    code: 'w',
-    label: 'Monospace',
-  },
-  {
-    code: 'b',
-    label: 'Bold',
-  },
-  {
-    code: 'i',
-    label: 'Italic',
-  },
-  {
-    code: 'd',
-    label: 'Doublestruck',
-  },
-  {
-    code: 'o',
-    label: 'Circled',
-  },
-  {
-    code: 'q',
-    label: 'Squared',
-  },
-];
-
-const effectCallbackCodeAccessor = (effectCode: TextEffectVariant) => `effect-${effectCode}`;
-
-const effectsKeyboardAccessor = (effectCodes: string[]) => {
-  const effectsAccessor = (effectCodes: string[]) =>
-    effectCodes.map((code) => allEffects.find((effect) => effect.code === code));
-  const effects = effectsAccessor(effectCodes);
-
-  const keyboard = new InlineKeyboard();
-  const chunkedEffects = chunk(effects, 3);
-  for (const effectsChunk of chunkedEffects) {
-    for (const effect of effectsChunk) {
-      effect && keyboard.text(effect.label, effectCallbackCodeAccessor(effect.code));
-    }
-    keyboard.row();
-  }
-
-  return keyboard;
-};
-
-const textEffectResponseAccessor = (originalText: string, modifiedText?: string) =>
-  `Original: ${originalText}` + (modifiedText ? `\nModified: ${modifiedText}` : '');
-
-const parseTextEffectResponse = (
-  response: string,
-): {
-  originalText: string;
-  modifiedText?: string;
-} => {
-  const originalTexts = (response.match(/Original: (.*)/) as any)[1];
-  if (!originalTexts) return { originalText: '', modifiedText: '' };
-
-  const originalText = originalTexts[1];
-  const modifiedTextMatch = response.match(/Modified: (.*)/);
-
-  let modifiedText;
-  if (modifiedTextMatch) modifiedText = modifiedTextMatch[1];
-
-  if (!modifiedTextMatch) return { originalText };
-  else return { originalText, modifiedText };
-};
-
-bot.command('effect', (ctx) =>
-  ctx.reply(textEffectResponseAccessor(ctx.match), {
-    reply_markup: effectsKeyboardAccessor(allEffects.map((effect) => effect.code)),
+bot.use(
+  session({
+    initial: () => [],
+    storage: freeStorage<BirthdayData[]>(bot.token),
   }),
 );
 
-// Handle inline queries
-const queryRegEx = /effect (monospace|bold|italic) (.*)/;
-bot.inlineQuery(queryRegEx, async (ctx) => {
-  const fullQuery = ctx.inlineQuery.query;
-  const fullQueryMatch = fullQuery.match(queryRegEx);
-  if (!fullQueryMatch) return;
+// Handle the /yo command to greet the user
+bot.command('list', (ctx) => {
+  const birthdays = ctx.session;
+  if (birthdays.length === 0) {
+    return ctx.reply('No birthdays yet');
+  } else {
+    const birthdays = ctx.session.sort((a, b) => {
+      const aDate = new Date(a.date);
+      const bDate = new Date(b.date);
+      return aDate === bDate ? 0 : aDate > bDate ? 1 : -1;
+    });
 
-  const effectLabel = fullQueryMatch[1];
-  const originalText = fullQueryMatch[2];
+    return ctx.reply(
+      birthdays
+        .map((record) => {
+          const date = new Date(record.date);
+          const age = DateTime.fromJSDate(date).diffNow('years').years * -1;
 
-  const effectCode = allEffects.find(
-    (effect) => effect.label.toLowerCase() === effectLabel.toLowerCase(),
-  )?.code;
-  const modifiedText = applyTextEffect(originalText, effectCode as Variant);
-
-  await ctx.answerInlineQuery(
-    [
-      {
-        type: 'article',
-        id: 'text-effect',
-        title: 'Text Effects',
-        input_message_content: {
-          message_text: `Original: ${originalText}
-Modified: ${modifiedText}`,
-          parse_mode: 'HTML',
-        },
-        reply_markup: new InlineKeyboard().switchInline('Share', fullQuery),
-        url: 'http://t.me/EludaDevSmarterBot',
-        description: 'Create stylish Unicode text, all within Telegram.',
-      },
-    ],
-    { cache_time: 30 * 24 * 3600 }, // one month in seconds
-  );
+          return `<code>${date.toLocaleDateString('pt-PT', {
+            year: 'numeric',
+            month: 'short',
+            day: '2-digit',
+          })}</code> — ${record.name} (${Math.floor(age)})`;
+        })
+        .join('\n'),
+      { parse_mode: 'HTML' },
+    );
+  }
 });
 
-// Return empty result list for other queries.
-bot.on('inline_query', (ctx) => ctx.answerInlineQuery([]));
+bot.command('add', (ctx) => {
+  const items = ctx.match;
+  const [name, date] = items?.split(',') || [];
 
-// Handle text effects from the effect keyboard
-for (const effect of allEffects) {
-  const allEffectCodes = allEffects.map((effect) => effect.code);
+  if (!name || !date) {
+    return ctx.reply('Please provide a name and a date like this: /add John, 2021-01-01');
+  }
 
-  bot.callbackQuery(effectCallbackCodeAccessor(effect.code), async (ctx) => {
-    const { originalText } = parseTextEffectResponse(ctx.msg?.text || '');
-    const modifiedText = applyTextEffect(originalText, effect.code);
+  const record = { name: name.trim(), date: date.trim() };
 
-    await ctx.editMessageText(textEffectResponseAccessor(originalText, modifiedText), {
-      reply_markup: effectsKeyboardAccessor(allEffectCodes.filter((code) => code !== effect.code)),
-    });
-  });
-}
+  ctx.session.push(record);
+  return ctx.reply(`Added ${record.name} — ${record.date}`);
+});
 
-// Handle the /about command
-const aboutUrlKeyboard = new InlineKeyboard().url(
-  'Host your own bot for free.',
-  'https://cyclic.sh/',
-);
+bot.command('remove', (ctx) => {
+  const name = ctx.match;
 
-// Suggest commands in the menu
-bot.api.setMyCommands([
-  { command: 'yo', description: 'Be greeted by the bot' },
-  {
-    command: 'effect',
-    description: 'Apply text effects on the text. (usage: /effect [text])',
-  },
-]);
+  if (!name) {
+    return ctx.reply('Please provide a name');
+  }
 
-// Handle all other messages and the /start command
-const introductionMessage = `Hello! I'm a Telegram bot.
-I'm powered by Cyclic, the next-generation serverless computing platform.
+  const index = ctx.session.findIndex((b) => b.name === name);
 
-<b>Commands</b>
-/yo - Be greeted by me
-/effect [text] - Show a keyboard to apply text effects to [text]`;
+  if (index === -1) {
+    return ctx.reply('No such birthday');
+  }
 
-const replyWithIntro = (ctx: any) =>
-  ctx.reply(introductionMessage, {
-    reply_markup: aboutUrlKeyboard,
-    parse_mode: 'HTML',
-  });
+  ctx.session.splice(index, 1);
+  return ctx.reply(`Removed ${name}`);
+});
 
-bot.command('start', replyWithIntro);
-bot.on('message', replyWithIntro);
+const app = express();
+
+// Use Webhooks for the production server
+app.use(express.json());
 
 // Start the server
 if (process.env.NODE_ENV === 'production') {
-  // Use Webhooks for the production server
-  const app = express();
-  app.use(express.json());
   app.use(webhookCallback(bot, 'express'));
-
-  const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
-    console.log(`Bot listening on port ${PORT}`);
-  });
 } else {
   // Use Long Polling for development
   bot.start();
 }
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Bot listening on port ${PORT}`);
+});
+
+app.post('/trigger', (req, res) => {
+  bot.api.sendMessage(process.env.CHAT_ID as string, 'Hello world');
+  res.json({ message: 'Triggered!' });
+});
