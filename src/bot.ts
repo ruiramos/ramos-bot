@@ -86,6 +86,11 @@ const app = express();
 // Use Webhooks for the production server
 app.use(express.json());
 
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Bot listening on port ${PORT}`);
+});
+
 // Start the server
 if (process.env.NODE_ENV === 'production') {
   app.use(webhookCallback(bot, 'express'));
@@ -93,11 +98,6 @@ if (process.env.NODE_ENV === 'production') {
   // Use Long Polling for development
   bot.start();
 }
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Bot listening on port ${PORT}`);
-});
 
 app.post('/trigger', (req, res) => {
   bot.api.sendMessage(process.env.CHAT_ID as string, 'Hello world');
