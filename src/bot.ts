@@ -66,3 +66,9 @@ app.post('/trigger', (req, res) => {
   bot.api.sendMessage(process.env.CHAT_ID as string, 'Hello world');
   res.json({ message: 'Triggered!' });
 });
+
+app.get('/', (req, res) => {
+  getRecords().then((birthdays) => {
+    res.json({ status: 'OK', birthdays });
+  });
+});
