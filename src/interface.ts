@@ -17,18 +17,6 @@ export function getAge(date: string): number {
   return DateTime.fromISO(date).diffNow('years').years * -1;
 }
 
-// export function daysToBirthday(date: string): number {
-//   const birthdayThisYear = DateTime.fromISO(date).set({ year: DateTime.now().year });
-
-//   let daysToBirthday = birthdayThisYear.diffNow('days').days;
-
-//   if (daysToBirthday < 0) {
-//     daysToBirthday = birthdayThisYear.plus({ years: 1 }).diffNow('days').days;
-//   }
-
-//   return daysToBirthday;
-// }
-
 export function birthdayLine(record: BirthdayData): string {
   const duration = Duration.fromObject({ days: Math.abs(record.diff) });
 
@@ -55,9 +43,9 @@ export function nextBirthday(record: BirthdayData): string {
     name = `[${name}](tg://user?id=${record.tgId})`;
   }
 
-  const nextAge = Math.floor(age);
+  const nextAge = Math.floor(age) + (record.diff === 0 ? 0 : 1);
 
-  const daysToBirthday = record.diff > 0 ? differenceToBirthday : 'hoje\\!';
+  const daysToBirthday = record.diff > 0 ? differenceToBirthday : 'hoje 🎉';
 
-  return `Próximo aniversariante — *${record.name}*, faz *${nextAge}* anos \\(${daysToBirthday}\\)`;
+  return `Próximo aniversariante — *${name}*, faz *${nextAge}* anos \\(${daysToBirthday}\\)`;
 }

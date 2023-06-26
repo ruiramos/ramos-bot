@@ -34,7 +34,11 @@ bot.command(['list', 'idades'], async (ctx) => {
 });
 
 bot.command(['proximo', 'next'], async (ctx) => {
-  const birthday = await getNext({ sort: 'diff' });
+  // const birthday = await getNext({ sort: 'diff' });
+  const birthdays = await getRecords({});
+
+  // Get a random birthday
+  const birthday = birthdays[Math.floor(Math.random() * birthdays.length)];
 
   return ctx.reply(nextBirthday(birthday), { parse_mode: 'MarkdownV2' });
 });
@@ -80,6 +84,22 @@ bot.command('remove', (ctx) => {
 });
 
 createDatabase();
+
+bot.api.setMyCommands([
+  {
+    command: 'aniversarios',
+    description:
+      'Mostra a lista completa de aniversários ordenados do mais próximo para o mais distante',
+  },
+  {
+    command: 'idades',
+    description: 'Mostra a lista completa de idades ordenadas por data de nascimento',
+  },
+  {
+    command: 'proximo',
+    description: 'Mostra o próximo aniversário',
+  },
+]);
 
 const app = express();
 
