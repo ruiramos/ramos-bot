@@ -59,18 +59,10 @@ app.listen(PORT, () => {
   console.log(`Bot listening on port ${PORT}`);
 });
 
-// Start the server
-if (process.env.NODE_ENV === 'production') {
-  console.log('Using Webhooks');
-  app.use(webhookCallback(bot, 'express'));
-} else {
-  // Use Long Polling for development
-  bot.start();
-}
-
 app.post('/trigger', (req, res) => {
   console.log('Reveived trigger request!');
   bot.api.sendMessage(process.env.CHAT_ID as string, 'Hello world');
+
   res.json({ message: 'Triggered!' });
 });
 
@@ -79,3 +71,12 @@ app.get('/status', async (req, res) => {
 
   res.json({ status: 'OK', birthdays });
 });
+
+// Start the server
+if (process.env.NODE_ENV === 'production') {
+  console.log('Using Webhooks');
+  app.use(webhookCallback(bot, 'express'));
+} else {
+  // Use Long Polling for development
+  bot.start();
+}
