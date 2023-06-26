@@ -1,18 +1,51 @@
 import express from 'express';
 import { Bot, webhookCallback } from 'grammy';
-import { formatLine } from './interface';
-import { addRecord, createDatabase, getRecords, removeRecord } from './database';
+import { ageLine, birthdayLine, getAge, nextBirthday } from './interface';
+import {
+  addRecord,
+  createDatabase,
+  getNext,
+  getRecords,
+  removeRecord,
+  resetDatabase,
+} from './database';
+import salutations from './salutations';
 
 const bot = new Bot(process.env.TELEGRAM_TOKEN || '');
 
-bot.command(['list', 'aniversarios', 'birthdays'], async (ctx) => {
-  const birthdays = await getRecords();
+bot.command(['aniversarios', 'birthdays'], async (ctx) => {
+  const birthdays = await getRecords({ sort: 'abs(min(diff, 0)) ASC, diff' });
 
   if (birthdays.length === 0) {
     return ctx.reply('No birthdays yet');
   } else {
-    return ctx.reply(birthdays.map(formatLine).join('\n'), { parse_mode: 'HTML' });
+    return ctx.reply(birthdays.map(birthdayLine).join('\n'), { parse_mode: 'Markdown' });
   }
+});
+
+bot.command(['list', 'idades'], async (ctx) => {
+  const birthdays = await getRecords({ sort: 'date' });
+
+  if (birthdays.length === 0) {
+    return ctx.reply('No birthdays yet');
+  } else {
+    return ctx.reply(birthdays.map(ageLine).join('\n'), { parse_mode: 'MarkdownV2' });
+  }
+});
+
+bot.command(['proximo', 'next'], async (ctx) => {
+  const birthday = await getNext({ sort: 'diff' });
+
+  return ctx.reply(nextBirthday(birthday), { parse_mode: 'MarkdownV2' });
+});
+
+bot.command('reset', (ctx) => {
+  if (process.env.NODE_ENV === 'production') {
+    return ctx.reply('Sorry, this command is not available in production');
+  }
+
+  resetDatabase();
+  return ctx.reply('Database reset');
 });
 
 bot.command('add', (ctx) => {
@@ -43,7 +76,6 @@ bot.command('remove', (ctx) => {
   }
 
   removeRecord({ name });
-
   return ctx.reply(`Removed ${name}`);
 });
 
@@ -59,15 +91,23 @@ app.listen(PORT, () => {
   console.log(`Bot listening on port ${PORT}`);
 });
 
-app.post('/trigger', (req, res) => {
-  console.log('Reveived trigger request!');
-  bot.api.sendMessage(process.env.CHAT_ID as string, 'Hello world');
+app.post('/trigger', async (req, res) => {
+  const birthday = await getNext({ sort: 'diff' });
+  if (birthday.diff === 0) {
+    const message = salutations[Math.floor(Math.random() * salutations.length)];
+    console.log(message);
+    const formattedMsg = message(birthday);
 
-  res.json({ message: 'Triggered!' });
+    bot.api.sendMessage(process.env.CHAT_ID as string, formattedMsg, {
+      parse_mode: 'Markdown',
+    });
+  }
+
+  res.json({ birthday });
 });
 
 app.get('/status', async (req, res) => {
-  const birthdays = await getRecords();
+  const birthdays = await getRecords({});
 
   res.json({ status: 'OK', birthdays });
 });
