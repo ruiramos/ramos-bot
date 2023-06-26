@@ -1,19 +1,18 @@
-import { Bot, webhookCallback } from 'grammy';
-import { DateTime } from 'luxon';
 import express from 'express';
-import { formatDate, formatLine } from './interface';
+import { Bot, webhookCallback } from 'grammy';
+import { formatLine } from './interface';
 import { addRecord, createDatabase, getRecords, removeRecord } from './database';
 
 const bot = new Bot(process.env.TELEGRAM_TOKEN || '');
 
 bot.command('list', async (ctx) => {
-  getRecords().then((birthdays) => {
-    if (birthdays.length === 0) {
-      return ctx.reply('No birthdays yet');
-    } else {
-      return ctx.reply(birthdays.map(formatLine).join('\n'), { parse_mode: 'HTML' });
-    }
-  });
+  const birthdays = await getRecords();
+
+  if (birthdays.length === 0) {
+    return ctx.reply('No birthdays yet');
+  } else {
+    return ctx.reply(birthdays.map(formatLine).join('\n'), { parse_mode: 'HTML' });
+  }
 });
 
 bot.command('add', (ctx) => {
