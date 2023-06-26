@@ -55,7 +55,7 @@ export function nextBirthday(record: BirthdayData): string {
     name = `[${name}](tg://user?id=${record.tgId})`;
   }
 
-  const nextAge = Math.floor(age) + 1;
+  const nextAge = Math.floor(age);
 
   const daysToBirthday = record.diff > 0 ? differenceToBirthday : 'hoje\\!';
 
