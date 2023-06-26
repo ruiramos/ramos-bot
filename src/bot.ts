@@ -72,10 +72,10 @@ app.post('/trigger', (req, res) => {
   res.json({ message: 'Triggered!' });
 });
 
-app.get('/', (req, res) => {
-  getRecords().then((birthdays) => {
-    res.json({ status: 'OK', birthdays });
-  });
+app.get('/status', (req, res) => {
+  const birthdays = await getRecords();
+
+  res.json({ status: 'OK', birthdays });
 });
 
 createDatabase();
