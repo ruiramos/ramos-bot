@@ -74,9 +74,9 @@ app.post('/trigger', (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  // getRecords().then((birthdays) => {
-  //   res.json({ status: 'OK', birthdays });
-  // });
+  getRecords().then((birthdays) => {
+    res.json({ status: 'OK', birthdays });
+  });
 });
 
 createDatabase();
