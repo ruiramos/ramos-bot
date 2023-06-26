@@ -5,7 +5,7 @@ import { addRecord, createDatabase, getRecords, removeRecord } from './database'
 
 const bot = new Bot(process.env.TELEGRAM_TOKEN || '');
 
-bot.command('list', async (ctx) => {
+bot.command(['list', 'aniversarios', 'birthdays'], async (ctx) => {
   const birthdays = await getRecords();
 
   if (birthdays.length === 0) {
