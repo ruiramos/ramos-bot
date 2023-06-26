@@ -72,7 +72,7 @@ app.post('/trigger', (req, res) => {
   res.json({ message: 'Triggered!' });
 });
 
-app.get('/status', (req, res) => {
+app.get('/status', async (req, res) => {
   const birthdays = await getRecords();
 
   res.json({ status: 'OK', birthdays });
