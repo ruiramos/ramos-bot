@@ -47,6 +47,8 @@ bot.command('remove', (ctx) => {
   return ctx.reply(`Removed ${name}`);
 });
 
+createDatabase();
+
 const app = express();
 
 // Use Webhooks for the production server
@@ -59,7 +61,7 @@ app.listen(PORT, () => {
 
 // Start the server
 if (process.env.NODE_ENV === 'production') {
-  console.log('Uing Webhooks');
+  console.log('Using Webhooks');
   app.use(webhookCallback(bot, 'express'));
 } else {
   // Use Long Polling for development
@@ -77,5 +79,3 @@ app.get('/status', async (req, res) => {
 
   res.json({ status: 'OK', birthdays });
 });
-
-createDatabase();
