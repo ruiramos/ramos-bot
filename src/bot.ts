@@ -1,12 +1,12 @@
 import { Bot, webhookCallback } from 'grammy';
 import { DateTime } from 'luxon';
 import express from 'express';
-import { addRecord, createDatabase, getRecords, removeRecord } from './database';
 import { formatDate, formatLine } from './interface';
+import { addRecord, createDatabase, getRecords, removeRecord } from './database';
 
 const bot = new Bot(process.env.TELEGRAM_TOKEN || '');
 
-bot.command('list', (ctx) => {
+bot.command('list', async (ctx) => {
   getRecords().then((birthdays) => {
     if (birthdays.length === 0) {
       return ctx.reply('No birthdays yet');
@@ -17,6 +17,10 @@ bot.command('list', (ctx) => {
 });
 
 bot.command('add', (ctx) => {
+  if (process.env.NODE_ENV === 'production') {
+    return ctx.reply('Sorry, this command is not available in production');
+  }
+
   const items = ctx.match;
   const [name, date] = items?.split(',') || [];
 
@@ -24,11 +28,15 @@ bot.command('add', (ctx) => {
     return ctx.reply('Please provide a name and a date like this: /add John, 2021-01-01');
   }
 
-  const record = addRecord({ name, date });
-  return ctx.reply(`Added ${record.name} — ${record.date}`);
+  addRecord({ name, date });
+  return ctx.reply(`Added ${name} — ${date}`);
 });
 
 bot.command('remove', (ctx) => {
+  if (process.env.NODE_ENV === 'production') {
+    return ctx.reply('Sorry, this command is not available in production');
+  }
+
   const name = ctx.match;
 
   if (!name) {
@@ -59,8 +67,6 @@ if (process.env.NODE_ENV === 'production') {
   bot.start();
 }
 
-createDatabase();
-
 app.post('/trigger', (req, res) => {
   console.log('Reveived trigger request!');
   bot.api.sendMessage(process.env.CHAT_ID as string, 'Hello world');
@@ -68,7 +74,9 @@ app.post('/trigger', (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  getRecords().then((birthdays) => {
-    res.json({ status: 'OK', birthdays });
-  });
+  // getRecords().then((birthdays) => {
+  //   res.json({ status: 'OK', birthdays });
+  // });
 });
+
+createDatabase();
