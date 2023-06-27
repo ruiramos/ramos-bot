@@ -34,11 +34,7 @@ bot.command(['list', 'idades'], async (ctx) => {
 });
 
 bot.command(['proximo', 'next'], async (ctx) => {
-  // const birthday = await getNext({ sort: 'diff' });
-  const birthdays = await getRecords({});
-
-  // Get a random birthday
-  const birthday = birthdays[Math.floor(Math.random() * birthdays.length)];
+  const birthday = await getNext({ sort: 'diff' });
 
   return ctx.reply(nextBirthday(birthday), { parse_mode: 'MarkdownV2' });
 });
