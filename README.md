@@ -10,7 +10,7 @@ It uses the following key packages:
 
 ## Deployment
 
-To deploy just push to the main branch and then activate the webhook.
+To deploy just push to the main branch and then activate the webhook. You need to do this after testing locally.
 
 ### Activating the webhook
 
