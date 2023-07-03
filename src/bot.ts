@@ -1,14 +1,7 @@
 import express from 'express';
 import { Bot, webhookCallback } from 'grammy';
-import { ageLine, birthdayLine, getAge, nextBirthday } from './interface';
-import {
-  addRecord,
-  createDatabase,
-  getNext,
-  getRecords,
-  removeRecord,
-  resetDatabase,
-} from './database';
+import { ageLine, birthdayLine, nextBirthday } from './interface';
+import { addRecord, createDatabase, getNext, getRecords, removeRecord } from './database';
 import salutations from './salutations';
 
 const bot = new Bot(process.env.TELEGRAM_TOKEN || '');
@@ -43,15 +36,6 @@ bot.command(['debug'], async (ctx) => {
   console.log(JSON.stringify(ctx, null, 2));
 });
 
-bot.command('reset', (ctx) => {
-  if (process.env.NODE_ENV === 'production') {
-    return ctx.reply('Sorry, this command is not available in production');
-  }
-
-  resetDatabase();
-  return ctx.reply('Database reset');
-});
-
 bot.command('add', (ctx) => {
   if (process.env.NODE_ENV === 'production') {
     return ctx.reply('Sorry, this command is not available in production');
@@ -83,8 +67,10 @@ bot.command('remove', (ctx) => {
   return ctx.reply(`Removed ${name}`);
 });
 
+// Creates the database if it doesn't exist.
 createDatabase();
 
+// Commands to be used in the live version. The other commands above are for development only.
 bot.api.setMyCommands([
   {
     command: 'aniversarios',
