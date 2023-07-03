@@ -98,6 +98,9 @@ app.listen(PORT, () => {
 });
 
 app.post('/trigger', async (req, res) => {
+  // no chat to notify, returning
+  if(!process.env.CHAT_ID) return;
+
   const birthday = await getNext({ sort: 'diff' });
   if (birthday.diff === 0) {
     const message = salutations[Math.floor(Math.random() * salutations.length)];
@@ -114,7 +117,6 @@ app.post('/trigger', async (req, res) => {
 
 app.get('/status', async (req, res) => {
   const birthdays = await getRecords({});
-
   res.json({ status: 'OK', birthdays });
 });
 
