@@ -14,38 +14,6 @@ export function createDatabase() {
   db.run('CREATE TABLE IF NOT EXISTS birthdays (name TEXT, date TEXT, pronoun TEXT, tgId INTEGER)');
 }
 
-export function resetDatabase() {
-  db.run('DELETE FROM birthdays');
-
-  const records: Omit<BirthdayData, 'diff'>[] = [
-    { name: 'Avó Madá', date: '1951-08-21', tgId: 571719707, pronoun: 'a' },
-    { name: 'Miguel', date: '1977-07-17', tgId: 389395377, pronoun: 'o' },
-    { name: 'Margarida', date: '1982-11-02', tgId: 588857213, pronoun: 'a' },
-    { name: 'Kiko', date: '2016-07-16', pronoun: 'o' },
-    { name: 'Ricardo', date: '1980-07-01', tgId: 41346049, pronoun: 'o' },
-    { name: 'Júlia', date: '1986-03-06', tgId: 922178536, pronoun: 'a' },
-    { name: 'Mariana', date: '1982-02-09', tgId: 660046681, pronoun: 'a' },
-    { name: 'Susana', date: '1983-05-19', tgId: 504191960, pronoun: 'a' },
-    { name: 'Rui', date: '1984-11-28', tgId: 516901179, pronoun: 'o' },
-    { name: 'Tomás', date: '2015-06-17', pronoun: 'o' },
-    { name: 'Afonso', date: '2017-06-11', pronoun: 'o' },
-    { name: 'Manuel', date: '1986-10-28', tgId: 584326839, pronoun: 'o' },
-    { name: 'Carolina', date: '1990-07-11', tgId: 499945316, pronoun: 'a' },
-    { name: 'Madalena', date: '1995-09-23', tgId: 577000085, pronoun: 'a' },
-    { name: 'João', date: '1991-04-25', tgId: 574795937, pronoun: 'o' },
-    { name: 'Maria Benedita', date: '2023-01-23', pronoun: 'a' },
-  ];
-
-  records.forEach((record) => {
-    db.run('INSERT INTO birthdays (name, date, tgId, pronoun) VALUES (?, ?, ?, ?)', [
-      record.name,
-      record.date,
-      record.tgId,
-      record.pronoun,
-    ]);
-  });
-}
-
 export function addRecord({ name, date }: Pick<BirthdayData, 'name' | 'date'>) {
   const record = { name: name.trim(), date: date.trim() };
 
