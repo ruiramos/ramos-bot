@@ -39,6 +39,10 @@ bot.command(['proximo', 'next'], async (ctx) => {
   return ctx.reply(nextBirthday(birthday), { parse_mode: 'MarkdownV2' });
 });
 
+bot.command(['debug'], async (ctx) => {
+  console.log(JSON.stringify(ctx, null, 2));
+});
+
 bot.command('reset', (ctx) => {
   if (process.env.NODE_ENV === 'production') {
     return ctx.reply('Sorry, this command is not available in production');
