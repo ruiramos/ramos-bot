@@ -1,7 +1,7 @@
 import express from 'express';
 import { Bot, webhookCallback } from 'grammy';
 import { ageLine, birthdayLine, nextBirthday } from './interface';
-import { addRecord, createDatabase, getNext, getRecords, removeRecord } from './database';
+import { addRecord, createDatabase, getNext, getRecords, removeRecord, clearDB } from './database';
 import salutations from './salutations';
 
 const bot = new Bot(process.env.TELEGRAM_TOKEN);
@@ -36,36 +36,36 @@ bot.command(['debug'], async (ctx) => {
   console.log(JSON.stringify(ctx, null, 2));
 });
 
-bot.command('add', (ctx) => {
-  if (process.env.NODE_ENV === 'production') {
-    return ctx.reply('Sorry, this command is not available in production');
-  }
+// commands for admin (ie local) use
+if (process.env.NODE_ENV !== 'production') {
+  bot.command('add', (ctx) => {
+    const items = ctx.match;
+    const [name, date] = items?.split(',').map(s => s.trim()) || [];
 
-  const items = ctx.match;
-  const [name, date] = items?.split(',') || [];
+    if (!name || !date) {
+      return ctx.reply('Please provide a name and a date in this format: `/add John, 1999-11-25`', { parse_mode: 'MarkdownV2' });
+    }
 
-  if (!name || !date) {
-    return ctx.reply('Please provide a name and a date like this: /add John, 2021-01-01');
-  }
+    addRecord({ name, date });
+    return ctx.reply(`Added ${name} — ${date}`);
+  });
 
-  addRecord({ name, date });
-  return ctx.reply(`Added ${name} — ${date}`);
-});
+  bot.command('remove', (ctx) => {
+    const name = ctx.match;
 
-bot.command('remove', (ctx) => {
-  if (process.env.NODE_ENV === 'production') {
-    return ctx.reply('Sorry, this command is not available in production');
-  }
+    if (!name) {
+      return ctx.reply('Please provide a name');
+    }
 
-  const name = ctx.match;
+    removeRecord({ name });
+    return ctx.reply(`Removed ${name}`);
+  });
 
-  if (!name) {
-    return ctx.reply('Please provide a name');
-  }
-
-  removeRecord({ name });
-  return ctx.reply(`Removed ${name}`);
-});
+  bot.command('clear', (ctx) => {
+    clearDB();
+    return ctx.reply(`Cleared the DB, oops`);
+  });
+}
 
 // Creates the database if it doesn't exist.
 createDatabase();

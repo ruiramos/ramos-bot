@@ -15,14 +15,17 @@ export function createDatabase() {
 }
 
 export function addRecord({ name, date }: Pick<BirthdayData, 'name' | 'date'>) {
-  const record = { name: name.trim(), date: date.trim() };
-
-  db.run('INSERT INTO birthdays (name, date) VALUES (?, ?)', [record.name, record.date]);
+  db.run('INSERT INTO birthdays (name, date) VALUES (?, ?)', [name, date]);
 }
 
 export function removeRecord({ name }: Pick<BirthdayData, 'name'>) {
   db.run('DELETE FROM birthdays WHERE name = ?', [name]);
 }
+
+export function clearDB() {
+  db.run('DELETE from birthdays');
+}
+
 
 type QueryProps = {
   sort?: string;
