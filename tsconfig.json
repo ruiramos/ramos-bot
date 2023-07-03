@@ -3,8 +3,8 @@
   "compilerOptions": {
     "module": "CommonJS",
     "outDir": "dist",
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "typeRoots" : ["./node_modules/@types", "./typings"]
   },
-  "include": ["src/bot.ts", "environment.d.ts"],
   "exclude": ["node_modules"]
 }

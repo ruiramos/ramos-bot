@@ -4,7 +4,7 @@ import { ageLine, birthdayLine, nextBirthday } from './interface';
 import { addRecord, createDatabase, getNext, getRecords, removeRecord } from './database';
 import salutations from './salutations';
 
-const bot = new Bot(process.env.TELEGRAM_TOKEN || '');
+const bot = new Bot(process.env.TELEGRAM_TOKEN);
 
 bot.command(['aniversarios', 'birthdays'], async (ctx) => {
   const birthdays = await getRecords({ sort: 'abs(min(diff, 0)) ASC, diff' });
