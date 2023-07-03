@@ -33,7 +33,9 @@ type QueryProps = {
 
 const buildQuery = ({ sort = 'date', where = '1=1', direction = 'ASC', limit = 400 }): string => {
   const year = DateTime.now().year;
-  const diff = `julianday(strftime('${year}-%m-%d', date)) - julianday(date('now'))`;
+  const bday = (y = year) => `julianday(strftime('${y}-%m-%d', date))`;
+  const now = `julianday(date('now'))`;
+  const diff = `IIF(${bday()} > ${now},  ${bday()} - ${now}, ${bday(year+1)} - ${now})`;
 
   const query = `SELECT name, ${diff} as diff, date, tgId, pronoun
                   FROM birthdays

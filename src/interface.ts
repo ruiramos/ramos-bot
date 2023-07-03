@@ -18,7 +18,7 @@ export function getAge(date: string): number {
 }
 
 export function birthdayLine(record: BirthdayData): string {
-  const duration = Duration.fromObject({ days: Math.abs(record.diff) });
+  const duration = Duration.fromObject({ days: record.diff });
 
   return `\`${formatDate(record.date)}\` — ${record.name} — ${duration.toFormat('d')} dias`;
 }
