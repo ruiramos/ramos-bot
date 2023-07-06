@@ -89,82 +89,107 @@ bot.on("message:new_chat_members:me", async (ctx) => {
   }
 });
 
-// commands for admin (ie local) use
-if (process.env.NODE_ENV !== "production") {
-  bot.command("add", (ctx) => {
-    let [name, date, chatId] = ctx.match?.split(",").map((s) => s.trim()) || [];
+// commands for admins
+bot.command("add", async (ctx) => {
+  let [name, date, chatId] = ctx.match?.split(",").map((s) => s.trim()) || [];
 
-    if (!chatId && ctx.chat.type === "group") chatId = String(ctx.chat.id);
-    let intChatId = parseInt(chatId);
+  let intChatId = parseInt(chatId);
 
-    if (!name || !date || !chatId) {
-      if (ctx.chat.type === "group") {
-        return ctx.reply(
-          "Please provide a name, a date in this format: `/add John, 1999-11-25`",
-          { parse_mode: "MarkdownV2" }
-        );
-      } else {
-        return ctx.reply(
-          "Please provide a name, a date and a chatId in this format: `/add John, 1999-11-25, -12345`",
-          { parse_mode: "MarkdownV2" }
-        );
-      }
-    }
+  // if we're sending commands from a group, will get the id from the message
+  if (ctx.chat.type === "group") intChatId = ctx.chat.id;
 
-    if (isNaN(intChatId)) {
-      return ctx.reply(`Invalid Chat ID, got ${chatId}`, {
-        parse_mode: "MarkdownV2",
-      });
-    }
+  if (isNaN(intChatId) || !intChatId) {
+    return ctx.reply(`Invalid Chat ID, got ${chatId}`, {
+      parse_mode: "MarkdownV2",
+    });
+  }
 
-    const adate = DateTime.fromISO(date);
-
-    if (!adate.isValid) {
+  if (!name || !date) {
+    if (ctx.chat.type === "group") {
       return ctx.reply(
-        "Couldn't parse date, please provide a date in this format: `/add John, 1999-11-25`",
+        "Please provide a name, a date in this format: `/add John, 1999-11-25`",
+        { parse_mode: "MarkdownV2" }
+      );
+    } else {
+      return ctx.reply(
+        "Please provide a name, a date and a chatId in this format: `/add John, 1999-11-25, -12345`",
         { parse_mode: "MarkdownV2" }
       );
     }
+  }
 
-    addRecord({ name, date, chatId: parseInt(chatId) });
-    return ctx.reply(`Added ${name} — ${date}`);
-  });
-
-  bot.command("remove", (ctx) => {
-    let [name, date, chatId] = ctx.match?.split(",").map((s) => s.trim()) || [];
-
-    if (!chatId && ctx.chat.type === "group") chatId = String(ctx.chat.id);
-    let intChatId = parseInt(chatId);
-
-    if (!name || !date || !chatId) {
-      if (ctx.chat.type === "group") {
-        return ctx.reply(
-          "Please provide a name, a date in this format: `/remove John, 1999-11-25`",
-          { parse_mode: "MarkdownV2" }
-        );
-      } else {
-        return ctx.reply(
-          "Please provide a name, a date and a chatId in this format: `/remove John, 1999-11-25, -12345`",
-          { parse_mode: "MarkdownV2" }
-        );
-      }
+  // limits add commands to group admins
+  try {
+    const chatMember = await ctx.api.getChatMember(intChatId, ctx.from!.id);
+    if (!["administrator", "creator"].includes(chatMember.status)) {
+      return ctx.reply(
+        "Apenas administratores do grupo podem adicionar e remover aniversariantes!"
+      );
     }
+  } catch (e) {
+    return ctx.reply("Group ID not found probably: " + (e as Error).message);
+  }
 
-    if (isNaN(intChatId)) {
-      return ctx.reply(`Invalid Chat ID, got ${chatId}`, {
-        parse_mode: "MarkdownV2",
-      });
+  const adate = DateTime.fromISO(date);
+
+  if (!adate.isValid) {
+    return ctx.reply(
+      "Couldn't parse date, please provide a date in this format: `/add John, 1999-11-25`",
+      { parse_mode: "MarkdownV2" }
+    );
+  }
+
+  await addRecord({ name, date, chatId: intChatId });
+  return ctx.reply(`Aniversariante adicionado: ${name} — ${date}`);
+});
+
+bot.command("remove", async (ctx) => {
+  let [name, date, chatId] = ctx.match?.split(",").map((s) => s.trim()) || [];
+
+  let intChatId = parseInt(chatId);
+
+  // if we're sending commands from a group, will get the id from the message
+  if (ctx.chat.type === "group") intChatId = ctx.chat.id;
+
+  if (isNaN(intChatId) || !intChatId) {
+    return ctx.reply(`Invalid Chat ID, got ${chatId}`, {
+      parse_mode: "MarkdownV2",
+    });
+  }
+
+  if (!name || !date) {
+    if (ctx.chat.type === "group") {
+      return ctx.reply(
+        "Please provide a name, a date in this format: `/add John, 1999-11-25`",
+        { parse_mode: "MarkdownV2" }
+      );
+    } else {
+      return ctx.reply(
+        "Please provide a name, a date and a chatId in this format: `/add John, 1999-11-25, -12345`",
+        { parse_mode: "MarkdownV2" }
+      );
     }
+  }
 
-    removeRecord({ name, date, chatId: intChatId });
-    return ctx.reply(`Removed ${name}`);
-  });
+  // limits add commands to group admins
+  try {
+    const chatMember = await ctx.api.getChatMember(intChatId, ctx.from!.id);
+    if (!["administrator", "creator"].includes(chatMember.status)) {
+      return ctx.reply(
+        "Apenas administratores do grupo podem adicionar e remover aniversariantes!"
+      );
+    }
+  } catch (e) {
+    return ctx.reply("Group ID not found probably: " + (e as Error).message);
+  }
 
-  bot.command("clear", (ctx) => {
-    clearDB();
-    return ctx.reply(`Cleared the DB, oops`);
-  });
-}
+  try {
+    await removeRecord({ name, date, chatId: intChatId });
+    return ctx.reply(`Aniversariante removido: ${name} - ${date}`);
+  } catch (e) {
+    return ctx.reply(`Nao encontrei esse aniversariante (mas ok).`);
+  }
+});
 
 // Commands to be used in the live version. The other commands above are for development only.
 let commands = [
@@ -182,24 +207,18 @@ let commands = [
     command: "proximo",
     description: "Mostra o próximo aniversário",
   },
+  {
+    command: "add",
+    description:
+      "Adiciona novo aniversariante. Limitado a Admins do grupo para evitar abusos de confiança.",
+  },
+  {
+    command: "remove",
+    description:
+      "Remove um aniversariante. Limitado a Admins do grupo para evitar abusos de confiança.",
+  },
 ];
 
-if (process.env.NODE_ENV !== "production") {
-  commands = commands.concat([
-    {
-      command: "add",
-      description: "[ADMIN] Adiciona novo aniversario",
-    },
-    {
-      command: "remove",
-      description: "[ADMIN] Remove um aniversario",
-    },
-    {
-      command: "debug",
-      description: "[ADMIN] Send debug message",
-    },
-  ]);
-}
 bot.api.setMyCommands(commands);
 
 const app = express();

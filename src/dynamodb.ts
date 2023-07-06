@@ -24,7 +24,12 @@ export async function addRecord({ name, date, chatId }: AddRemoveArg) {
 
 export async function removeRecord({ name, date, chatId }: AddRemoveArg) {
   const k = `${chatId}:${name}:${date}`;
-  return await (await birthdays.get(k)).delete();
+  const record = await birthdays.get(k);
+  if (record) {
+    return await record.delete();
+  } else {
+    throw new Error("404");
+  }
 }
 
 export async function clearDB() {
